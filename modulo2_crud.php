@@ -1,7 +1,4 @@
 <?php
-// Módulo 2: CRUD de Colegios
-// Objetivo: Interfaz web para gestionar registros de la tabla colegios
-// Operaciones: LISTAR, CREAR, EDITAR, ELIMINAR con validaciones básicas
 
 session_start();
 
@@ -192,7 +189,6 @@ try {
     $errors['general'] = 'Error al cargar datos: ' . $e->getMessage();
 }
 
-// Obtener mensajes flash de la sesión
 $message = $_SESSION['message'] ?? '';
 $message_type = $_SESSION['message_type'] ?? '';
 unset($_SESSION['message'], $_SESSION['message_type']);
@@ -205,7 +201,6 @@ unset($_SESSION['message'], $_SESSION['message_type']);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CRUD de Colegios - Eureka</title>
     <style>
-        /* Estilos básicos para claridad visual (no estética compleja) */
         * {
             box-sizing: border-box;
             font-family: Arial, sans-serif;

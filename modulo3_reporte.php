@@ -1,7 +1,4 @@
 <?php
-// Módulo 3: Reporte Consolidado
-// Objetivo: Cruzar información de colegios y facturación usando la tabla de homologación del Módulo 1
-// Requisito técnico: Usar id_colegio de homologacion_colegios para JOIN, NO hacer JOIN directo por nombre
 
 try {
     // Conexión a la base de datos usando PDO (misma configuración que módulos anteriores)
@@ -22,8 +19,6 @@ try {
     $stmtDept = $pdo->query("SELECT DISTINCT departamento FROM colegios ORDER BY departamento");
     $departamentos = $stmtDept->fetchAll();
 
-    // CONSULTA PRINCIPAL: Usa homologacion_colegios para hacer JOIN (cumple requisito técnico)
-    // No se hace JOIN directo por nombre entre colegios y facturacion
     $sql = "SELECT 
                 c.id,
                 c.nombre,
@@ -32,7 +27,6 @@ try {
                 c.cantidad_estudiantes,
                 COALESCE(SUM(f.total_factura), 0) AS total_facturado,
                 COUNT(f.id) AS cantidad_facturas,
-                -- Estado predominante de pagos (subconsulta correlacionada)
                 CASE 
                     WHEN COUNT(f.id) = 0 THEN 'sin_facturacion'
                     ELSE (
@@ -46,11 +40,8 @@ try {
                 END AS estado_predominante,
                 h.estado AS homologacion_estado
             FROM colegios c
-            -- JOIN obligatorio usando id_colegio de homologacion_colegios
             INNER JOIN homologacion_colegios h ON c.id = h.id_colegio
-            -- LEFT JOIN a facturación usando nombre_facturacion (campo de homologación)
             LEFT JOIN facturacion f ON f.nombre_colegio = h.nombre_facturacion
-            -- Aplicar filtro de departamento si se proporciona
             " . (!empty($departamentoFilter) ? " WHERE c.departamento = :dept " : "") . "
             GROUP BY c.id, c.nombre, c.ciudad, c.departamento, c.cantidad_estudiantes, h.estado, h.nombre_facturacion
             ORDER BY c.id";

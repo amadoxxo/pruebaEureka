@@ -10,7 +10,7 @@ Solución a la prueba técnica para Desarrollador PHP de Eureka Contenidos Educa
 
 ## Instrucciones de Instalación
 1. Asegurar que el servidor XAMPP (Apache + MySQL) esté en ejecución
-2. Importar la base de datos `prueba_eureka` con las tablas `colegios`, `facturacion` y `homologacion_colegios` (el usuario ya las creó previamente)
+2. Importar la base de datos `prueba_eureka` con las tablas `colegios`, `facturacion` y `homologacion_colegios`
 3. Verificar credenciales de base de datos en los archivos PHP (por defecto: `host=localhost`, `user=root`, `password=""`, `dbname=prueba_eureka`)
 4. Acceder a los módulos vía navegador:
    - Homologación: `http://localhost/PruebaEureka/modulo1_homologacion.php`
@@ -35,21 +35,8 @@ La tabla `facturacion` no tiene una clave foránea (FK) hacia `colegios`, usando
 - Falta de integridad referencial: No hay garantía de que una factura corresponda a un colegio existente, generando registros huérfanos.
 
 **Rediseño propuesto para evitar el problema**:
-1. Agregar un campo `id_colegio INT NULL` a la tabla `facturacion` para referenciar directamente al colegio.
-2. Crear la clave foránea:
-   ```sql
-   ALTER TABLE facturacion 
-   ADD CONSTRAINT fk_facturacion_colegio 
-   FOREIGN KEY (id_colegio) REFERENCES colegios(id);
-   ```
-3. Migrar los datos existentes usando el proceso de homologación del Módulo 1:
-   ```sql
-   UPDATE facturacion f
-   JOIN homologacion_colegios h ON f.nombre_colegio = h.nombre_facturacion
-   SET f.id_colegio = h.id_colegio
-   WHERE h.estado = 'homologado';
-   ```
-4. Una vez validada la migración, se puede hacer `id_colegio` no nulo y eventualmente eliminar el campo `nombre_colegio` (o mantenerlo como respaldo histórico).
+- Agregar un campo `id_colegio INT NULL` a la tabla `facturacion` para referenciar directamente al colegio.
+- Una vez validada la migración, se puede hacer `id_colegio` no nulo y eventualmente eliminar el campo `nombre_colegio` (o mantenerlo como respaldo histórico).
 
 ---
 
@@ -58,22 +45,8 @@ El Módulo 1 implementa coincidencia exacta por nombre usando `COLLATE utf8mb4_b
 
 **Estrategia para mejorar el proceso con coincidencias aproximadas**:
 
-1. **Normalización de cadenas en PHP**:
-   Crear una función que limpie los nombres antes de comparar:
-   ```php
-   function normalizarNombre($nombre) {
-       // Convertir a mayúsculas, eliminar tildes, recortar espacios
-       $nombre = mb_strtoupper(trim($nombre), 'UTF-8');
-       $nombre = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $nombre);
-       // Colapsar múltiples espacios en uno solo
-       $nombre = preg_replace('/\s+/', ' ', $nombre);
-       return $nombre;
-   }
-   ```
-   Aplicar esta función tanto a los nombres en `colegios` como en `facturacion` antes de buscar coincidencias.
-
-2. **Coincidencia difusa en PHP**:
-   Usar la función `levenshtein()` para encontrar nombres con baja distancia de edición (menos de 3 caracteres de diferencia):
+**Coincidencia difusa en PHP**:
+- Usar la función `levenshtein()` para encontrar nombres con baja distancia de edición (menos de 3 caracteres de diferencia):
    ```php
    $distancia = levenshtein(
        normalizarNombre($nombreFacturacion),
@@ -84,17 +57,9 @@ El Módulo 1 implementa coincidencia exacta por nombre usando `COLLATE utf8mb4_b
    }
    ```
 
-3. **Búsqueda fonética en SQL (MySQL)**:
-   Usar la función `SOUNDEX()` para agrupar nombres que suenan igual, útil para errores de escritura fonética (ej: "Colégio" vs "Colegio"):
-   ```sql
-   SELECT * FROM colegios 
-   WHERE SOUNDEX(nombre) = SOUNDEX(:nombre_facturacion)
-   ```
-
 ---
 
 ### Pregunta 3 — Seguridad
-Tres vulnerabilidades comunes en CRUDs PHP mal implementados y cómo se previnieron en la solución:
 
 1. **Inyección SQL**:
    - *Problema*: Concatenar directamente la entrada del usuario en consultas SQL, permitiendo ejecutar comandos maliciosos.
@@ -166,25 +131,10 @@ CREATE INDEX idx_colegios_departamento ON colegios(departamento);
 ### Pregunta 5 — Criterio propio
 **Problemas detectados en el diseño original y solución implementada**:
 
-1. **Campo `nombre_facturacion` NOT NULL en `homologacion_colegios`**:
+- **Campo `nombre_facturacion` NOT NULL en `homologacion_colegios`**:
    - *Problema*: Al insertar registros de tipo `sin_facturacion` (colegios sin facturas), no hay un nombre de facturación que asociar, pero el campo original no permitía valores NULL. Al ejecutar el Módulo 1 inicialmente daba un error de integridad.
    - *Solución*: Modifiqué la tabla para permitir NULL en ese campo: `ALTER TABLE homologacion_colegios MODIFY nombre_facturacion VARCHAR(200) NULL`.
 
-2. **Comparación de cadenas sensible a mayúsculas/minúsculas**:
+- **Comparación de cadenas sensible a mayúsculas/minúsculas**:
    - *Problema*: Por defecto, MySQL hace comparaciones de cadenas insensibles a mayúsculas/minúsculas (collation case-insensitive), lo que podría causar coincidencias incorrectas (ej: "Colegio A" vs "COLEGIO A").
    - *Solución*: Usé el operador `COLLATE utf8mb4_bin` en todas las comparaciones de nombres en los tres módulos para asegurar coincidencia exacta según lo requerido.
-
-3. **Idempotencia del Módulo 1**:
-   - *Problema*: El requisito exige que el proceso de homologación sea idempotente (ejecutable múltiples veces sin duplicar registros).
-   - *Solución*: Antes de insertar un registro en `homologacion_colegios`, elimino cualquier registro existente para ese nombre de colegio en facturación, y limpio los registros de tipo `sin_facturacion` antes de volver a insertarlos. Esto garantiza que no haya duplicados al ejecutar el script varias veces.
-
----
-
-## Estructura del Proyecto
-```
-PruebaEureka/
-├── modulo1_homologacion.php   # Homologación de IDs (con comentarios en español y estilos CSS)
-├── modulo2_crud.php           # CRUD de colegios (con alertas JS y validaciones)
-├── modulo3_reporte.php        # Reporte consolidado (usando tabla de homologación)
-└── README.md                  # Documentación y respuestas técnicas
-```
