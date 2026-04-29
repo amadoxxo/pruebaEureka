@@ -10,7 +10,7 @@ Solución a la prueba técnica para Desarrollador PHP de Eureka Contenidos Educa
 
 ## Instrucciones de Instalación
 1. Asegurar que el servidor XAMPP (Apache + MySQL) esté en ejecución
-2. Importar la base de datos `prueba_eureka` con las tablas `colegios`, `facturacion` y `homologacion_colegios` (el usuario ya las creó previamente)
+2. Importar la base de datos `prueba_eureka` con las tablas `colegios`, `facturacion` y `homologacion_colegios`
 3. Verificar credenciales de base de datos en los archivos PHP (por defecto: `host=localhost`, `user=root`, `password=""`, `dbname=prueba_eureka`)
 4. Acceder a los módulos vía navegador:
    - Homologación: `http://localhost/PruebaEureka/modulo1_homologacion.php`
